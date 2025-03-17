@@ -3,7 +3,7 @@ import json
 import random
 from confluent_kafka import Producer
 
-KAFKA_BOOTSTRAP_SERVERS = "broker:9092"
+KAFKA_BOOTSTRAP_SERVERS = "broker:29092"
 KAFKA_TOPIC = "sensor_data_topic"
 
 producer_conf = {
