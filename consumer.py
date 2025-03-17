@@ -1,22 +1,33 @@
-from kafka import KafkaConsumer
+import os
 import json
+from kafka import KafkaConsumer
 
-# Replace with your MSK cluster bootstrap servers
-# bootstrap_servers = ['<broker-1-endpoint>:9094', '<broker-2-endpoint>:9094']
-bootstrap_servers = ['localhost:29092']
+# Lấy cấu hình từ biến môi trường (nếu có) hoặc dùng giá trị mặc định
+BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:29092").split(",")
+TOPIC = os.getenv("KAFKA_TOPIC", "my_msk_topic")
+GROUP_ID = os.getenv("KAFKA_CONSUMER_GROUP", "my_group")
 
-# Create a Kafka consumer
+# Tạo Kafka consumer
 consumer = KafkaConsumer(
-    'my_msk_topic',  # Thay bằng tên topic thật
-    bootstrap_servers=bootstrap_servers,
-    security_protocol='PLAINTEXT',  # Không dùng SSL, nên đổi thành PLAINTEXT
+    TOPIC,
+    bootstrap_servers=BOOTSTRAP_SERVERS,
+    security_protocol='PLAINTEXT',  # Sử dụng kết nối không mã hoá (PLAINTEXT)
     value_deserializer=lambda x: json.loads(x.decode('utf-8')),
-    auto_offset_reset='earliest',
-    group_id='my_group'
+    auto_offset_reset='earliest',   # Đọc từ offset đầu tiên nếu chưa có offset nào được lưu
+    group_id=GROUP_ID
 )
-# Consume messages from the Kafka topic
-for message in consumer:
-    print(f"Received: {message.value}")
 
-# Close the consumer
-consumer.close()
+def consume_messages():
+    """Lắng nghe và xử lý các message nhận được từ Kafka."""
+    print(f"Consumer bắt đầu lắng nghe trên topic: {TOPIC}")
+    try:
+        for message in consumer:
+            print(f"Received: {message.value}")
+    except KeyboardInterrupt:
+        print("Consumer dừng do người dùng yêu cầu.")
+    finally:
+        consumer.close()
+        print("Consumer đã đóng kết nối.")
+
+if __name__ == "__main__":
+    consume_messages()
