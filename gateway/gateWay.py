@@ -6,8 +6,8 @@ import argparse
 from confluent_kafka import Producer
 from datetime import datetime
 # Lấy cấu hình Kafka từ biến môi trường hoặc dùng giá trị mặc định
-KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:29092")
-KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "sensor_data_topic")
+KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:39092")
+KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "sensor_data_topics")
 
 # Cấu hình producer cho Kafka
 producer_conf = {
@@ -69,10 +69,15 @@ if __name__ == "__main__":
 
     # Định nghĩa danh sách các cảm biến với thông số tùy chỉnh
     sensors = [
-        {"sensor_id": "sensor_01", "temperature_range": (20, 25), "humidity_range": (40, 60)},
-        {"sensor_id": "sensor_02", "temperature_range": (25, 30), "humidity_range": (50, 70)},
-        {"sensor_id": "sensor_03", "temperature_range": (35, 40), "humidity_range": (55, 75)},
-        {"sensor_id": "sensor_04", "temperature_range": (20, 30), "humidity_range": (60, 80)},
-        {"sensor_id": "sensor_05", "temperature_range": (25, 35), "humidity_range": (40, 80)},
+        {"sensor_id": "sensor_01", "temperature_range": (18, 22), "humidity_range": (35, 50)},
+        {"sensor_id": "sensor_02", "temperature_range": (22, 27), "humidity_range": (45, 65)},
+        {"sensor_id": "sensor_03", "temperature_range": (30, 35), "humidity_range": (50, 70)},
+        {"sensor_id": "sensor_04", "temperature_range": (15, 20), "humidity_range": (30, 50)},
+        {"sensor_id": "sensor_05", "temperature_range": (20, 25), "humidity_range": (40, 60)},
+        {"sensor_id": "sensor_06", "temperature_range": (25, 30), "humidity_range": (50, 75)},
+        {"sensor_id": "sensor_07", "temperature_range": (28, 33), "humidity_range": (55, 80)},
+        {"sensor_id": "sensor_08", "temperature_range": (32, 38), "humidity_range": (60, 85)},
+        {"sensor_id": "sensor_09", "temperature_range": (35, 40), "humidity_range": (65, 90)},
+        {"sensor_id": "sensor_10", "temperature_range": (40, 45), "humidity_range": (70, 95)}
     ]
     main(sensors, args.interval)

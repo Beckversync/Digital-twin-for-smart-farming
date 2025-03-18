@@ -3,7 +3,7 @@ import json
 from kafka import KafkaConsumer
 
 # Lấy cấu hình từ biến môi trường hoặc dùng giá trị mặc định
-BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:29092").split(",")
+BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:39092").split(",")
 TOPIC = os.getenv("KAFKA_TOPIC", "sensor_data_topic")  # Trùng với gateway
 GROUP_ID = os.getenv("KAFKA_CONSUMER_GROUP", "sensor_group")  # Đổi group ID
 
