@@ -69,12 +69,10 @@ if __name__ == "__main__":
 
     # Định nghĩa danh sách các cảm biến với thông số tùy chỉnh
     sensors = [
-        {"sensor_id": "sensor_01", "temperature_range": (20, 30), "humidity_range": (40, 60)},
-        {"sensor_id": "sensor_02", "temperature_range": (15, 25), "humidity_range": (35, 55)},
-        {"sensor_id": "sensor_03", "temperature_range": (15, 25), "humidity_range": (35, 55)},
-        {"sensor_id": "sensor_04", "temperature_range": (15, 25), "humidity_range": (35, 55)},
-        {"sensor_id": "sensor_05", "temperature_range": (15, 25), "humidity_range": (35, 55)},
-
+        {"sensor_id": "sensor_01", "temperature_range": (20, 25), "humidity_range": (40, 60)},
+        {"sensor_id": "sensor_02", "temperature_range": (25, 30), "humidity_range": (50, 70)},
+        {"sensor_id": "sensor_03", "temperature_range": (35, 40), "humidity_range": (55, 75)},
+        {"sensor_id": "sensor_04", "temperature_range": (20, 30), "humidity_range": (60, 80)},
+        {"sensor_id": "sensor_05", "temperature_range": (25, 35), "humidity_range": (40, 80)},
     ]
-
     main(sensors, args.interval)
