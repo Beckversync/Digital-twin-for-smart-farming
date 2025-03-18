@@ -71,7 +71,10 @@ if __name__ == "__main__":
     sensors = [
         {"sensor_id": "sensor_01", "temperature_range": (20, 30), "humidity_range": (40, 60)},
         {"sensor_id": "sensor_02", "temperature_range": (15, 25), "humidity_range": (35, 55)},
-        # Thêm nhiều cảm biến nếu cần
+        {"sensor_id": "sensor_03", "temperature_range": (15, 25), "humidity_range": (35, 55)},
+        {"sensor_id": "sensor_04", "temperature_range": (15, 25), "humidity_range": (35, 55)},
+        {"sensor_id": "sensor_05", "temperature_range": (15, 25), "humidity_range": (35, 55)},
+
     ]
 
     main(sensors, args.interval)
