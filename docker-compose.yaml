@@ -41,7 +41,17 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=broker:9092
     networks:
       - kafka-network
-
+  influxdb:
+    image: influxdb:2.0
+    container_name: influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - INFLUXDB_DB=sensor_data
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_PASSWORD=admin123
+    networks:
+      - kafka-network
   control-center:
     image: confluentinc/cp-enterprise-control-center:6.1.0
     hostname: control-center
