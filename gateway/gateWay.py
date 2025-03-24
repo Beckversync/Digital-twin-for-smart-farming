@@ -55,7 +55,7 @@ def main(sensors, interval):
                     temperature_range=sensor.get("temperature_range", (20, 30)),
                     humidity_range=sensor.get("humidity_range", (40, 60))
                 )
-                print(f"📡 Đọc dữ liệu cảm biến: {data}")
+                print(f"📡 Đọc dữ liệu cảm biến từ Farm 1: {data}")
                 send_to_kafka(data)
             time.sleep(interval)
     except KeyboardInterrupt:
@@ -69,7 +69,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     sensors = [
-        {"sensor_id": f"sensor_{i+1}", "temperature_range": (20 + i, 25 + i), "humidity_range": (40 + i, 60 + i)}
+        {"sensor_id": f"sensor_farm1_{i+1}", "temperature_range": (20 + i, 25 + i), "humidity_range": (40 + i, 60 + i)}
         for i in range(10)
     ]
     main(sensors, args.interval)
