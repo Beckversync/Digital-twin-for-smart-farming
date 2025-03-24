@@ -25,14 +25,25 @@ def delivery_callback(err, msg):
 
 def send_to_kafka(data):
     """Gửi dữ liệu JSON lên Kafka với xử lý lỗi."""
-    try:
-        message_json = json.dumps(data)
-        producer.produce(KAFKA_TOPIC, value=message_json, callback=delivery_callback)
-        producer.poll(0)
-    except KafkaException as e:
-        print(f"⚠️ Kafka Error: {e}")
-    except Exception as e:
-        print(f"⚠️ Lỗi khi gửi lên Kafka: {e}")
+    retries = 3  # Số lần thử lại nếu lỗi
+    for _ in range(retries):
+        try:
+            message_json = json.dumps(data)
+            producer.produce(KAFKA_TOPIC, value=message_json, callback=delivery_callback)
+            producer.poll(0)
+            return
+        except KafkaException as e:
+            print(f"⚠️ Kafka Error: {e}, thử lại...")
+            time.sleep(2)
+        except Exception as e:
+            print(f"⚠️ Lỗi khi gửi lên Kafka: {e}")
+            return
+    print("❌ Gửi dữ liệu thất bại sau nhiều lần thử.")
+
+# Đảm bảo producer đóng đúng cách
+import atexit
+atexit.register(lambda: producer.flush())
+
 
 def read_sensor_data(sensor_id, temperature_range=(20, 30), humidity_range=(40, 60)):
     """Giả lập dữ liệu cảm biến."""

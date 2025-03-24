@@ -10,7 +10,7 @@ GROUP_ID = os.getenv("KAFKA_CONSUMER_GROUP", "sensor_group")
 
 # Cấu hình InfluxDB
 INFLUXDB_URL = os.getenv("INFLUXDB_URL", "http://localhost:8086")
-INFLUXDB_TOKEN = os.getenv("INFLUXDB_TOKEN", "G1Ct5CO1I3ZCGMiaTSm-cU6izfe0goymuRH1aD3F929zTFTuxulNqoVgF0m7Gw3JoCDJdw9AqaeNUfCMMAAPeQ==")
+INFLUXDB_TOKEN = os.getenv("INFLUXDB_TOKEN", "Xa5I6RwV1AcYKdz8efwUgY4E_4tlHU02iKsofqSZVLVTPw7MiGwoDEZE3n_0dA9vweGUapSUXKZXIcGN-C1Tew==")
 INFLUXDB_ORG = os.getenv("INFLUXDB_ORG", "Ho Chi Minh University of Technology")
 INFLUXDB_BUCKET = os.getenv("INFLUXDB_BUCKET", "sensor_data")
 
