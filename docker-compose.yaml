@@ -31,6 +31,16 @@ services:
       KAFKA_TOOLS_LOG4J_LOGLEVEL: ERROR
     networks:
       - kafka-network
+  gateway2:
+    build: ./gateway2
+    container_name: gateway2
+    depends_on:
+      - broker
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=broker:9092
+      - KAFKA_TOPIC_FARM2=sensor_data_farm2
+    networks:
+      - kafka-network
 
   gateway:
     build: ./gateway

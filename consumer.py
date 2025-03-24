@@ -5,12 +5,12 @@ from influxdb_client import InfluxDBClient, Point, WritePrecision
 
 # Lấy cấu hình từ biến môi trường hoặc dùng giá trị mặc định
 BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:39092").split(",")
-TOPIC = os.getenv("KAFKA_TOPIC", "sensor_data")  # Đồng bộ với Gateway
+TOPICS = ["sensor_data", "sensor_data_farm2"]  # Lắng nghe cả hai topic
 GROUP_ID = os.getenv("KAFKA_CONSUMER_GROUP", "sensor_group")
 
 # Cấu hình InfluxDB
 INFLUXDB_URL = os.getenv("INFLUXDB_URL", "http://localhost:8086")
-INFLUXDB_TOKEN = os.getenv("INFLUXDB_TOKEN", "yh3-4d56K_isFw40Ar7p9NQ0SYxV8qYCdZ3L_wLEvZf7xH-yL1PoeTwVGQxOyXJq9b_zSXdkKXADD64tvF4W6Q==")
+INFLUXDB_TOKEN = os.getenv("INFLUXDB_TOKEN", "G1Ct5CO1I3ZCGMiaTSm-cU6izfe0goymuRH1aD3F929zTFTuxulNqoVgF0m7Gw3JoCDJdw9AqaeNUfCMMAAPeQ==")
 INFLUXDB_ORG = os.getenv("INFLUXDB_ORG", "Ho Chi Minh University of Technology")
 INFLUXDB_BUCKET = os.getenv("INFLUXDB_BUCKET", "sensor_data")
 
@@ -19,10 +19,9 @@ influx_client = InfluxDBClient(url=INFLUXDB_URL, token=INFLUXDB_TOKEN, org=INFLU
 from influxdb_client.client.write_api import SYNCHRONOUS
 write_api = influx_client.write_api(write_options=SYNCHRONOUS)
 
-
 # Kafka Consumer
 consumer = KafkaConsumer(
-    TOPIC,
+    *TOPICS,
     bootstrap_servers=BOOTSTRAP_SERVERS,
     security_protocol='PLAINTEXT',
     value_deserializer=lambda x: json.loads(x.decode('utf-8')),
@@ -32,11 +31,11 @@ consumer = KafkaConsumer(
 
 def consume_messages():
     """Nhận dữ liệu từ Kafka và lưu vào InfluxDB"""
-    print(f"📡 Consumer đang lắng nghe trên topic: {TOPIC}...")
+    print(f"📡 Consumer đang lắng nghe trên các topics: {TOPICS}...")
     try:
         for message in consumer:
             data = message.value
-            print(f"✅ Received: {data}")
+            print(f"✅ Received from {message.topic}: {data}")
 
             # Chuyển đổi dữ liệu thành Point của InfluxDB
             point = Point("sensor_data").tag("sensor_id", data["sensor_id"]) \
