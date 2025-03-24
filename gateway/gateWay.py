@@ -3,76 +3,96 @@ import time
 import json
 import random
 import argparse
+import atexit
+import logging
+from threading import Thread, Event
 from confluent_kafka import Producer, KafkaException
 from datetime import datetime
 
-# Lấy cấu hình Kafka từ biến môi trường hoặc dùng giá trị mặc định
-KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:39092")
-KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "sensor_data")  # Đồng nhất với consumer
+# Cấu hình logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# Cấu hình producer cho Kafka
+# Cấu hình Kafka
+KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:39092")
+KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "sensor_data")
+
+# Cấu hình producer
 producer_conf = {
     'bootstrap.servers': KAFKA_BOOTSTRAP_SERVERS,
+    'compression.type': 'snappy',
 }
 producer = Producer(producer_conf)
 
-def delivery_callback(err, msg):
-    """Callback để xử lý kết quả gửi tin không đồng bộ."""
-    if err:
-        print(f"⚠️ Lỗi khi gửi tin: {err}")
-    else:
-        print(f"✅ Tin gửi thành công tới {msg.topic()} [partition {msg.partition()}] offset {msg.offset()}")
+# Sự kiện để dừng các luồng một cách an toàn
+stop_event = Event()
 
-def send_to_kafka(data):
-    """Gửi dữ liệu JSON lên Kafka với xử lý lỗi."""
-    retries = 3  # Số lần thử lại nếu lỗi
-    for _ in range(retries):
+# Đóng Kafka producer khi chương trình dừng
+def close_producer():
+    logging.info("🔴 Đang đóng Kafka producer...")
+    producer.flush()
+    logging.info("✅ Kafka producer đã đóng.")
+
+atexit.register(close_producer)  # Đảm bảo producer được đóng khi chương trình kết thúc
+
+def delivery_callback(err, msg):
+    """Callback xử lý kết quả gửi tin."""
+    if err:
+        logging.warning(f"Lỗi khi gửi tin: {err}")
+    else:
+        logging.info(f"✅ Tin gửi thành công tới {msg.topic()} [partition {msg.partition()}] offset {msg.offset()}")
+
+def send_to_kafka(data, retries=3):
+    """Gửi dữ liệu JSON lên Kafka với retry nếu lỗi."""
+    message_json = json.dumps(data)
+    for attempt in range(retries):
         try:
-            message_json = json.dumps(data)
             producer.produce(KAFKA_TOPIC, value=message_json, callback=delivery_callback)
             producer.poll(0)
-            return
+            return  # Gửi thành công thì thoát
         except KafkaException as e:
-            print(f"⚠️ Kafka Error: {e}, thử lại...")
-            time.sleep(2)
+            logging.warning(f"Kafka Error (lần {attempt+1}): {e}")
+            time.sleep(2)  # Chờ trước khi thử lại
         except Exception as e:
-            print(f"⚠️ Lỗi khi gửi lên Kafka: {e}")
-            return
-    print("❌ Gửi dữ liệu thất bại sau nhiều lần thử.")
-
-# Đảm bảo producer đóng đúng cách
-import atexit
-atexit.register(lambda: producer.flush())
-
+            logging.error(f"Lỗi khi gửi lên Kafka: {e}")
+            break  # Lỗi khác không phải Kafka thì không retry
 
 def read_sensor_data(sensor_id, temperature_range=(20, 30), humidity_range=(40, 60)):
     """Giả lập dữ liệu cảm biến."""
-    temperature = random.uniform(*temperature_range)
-    humidity = random.uniform(*humidity_range)
     return {
         "sensor_id": sensor_id,
-        "temperature": temperature,
-        "humidity": humidity,
+        "temperature": round(random.uniform(*temperature_range), 2),
+        "humidity": round(random.uniform(*humidity_range), 2),
         "timestamp": datetime.utcnow().isoformat()
     }
 
+def sensor_thread(sensor_id, temperature_range, humidity_range, interval):
+    """Luồng cảm biến, dừng an toàn khi có tín hiệu stop_event."""
+    while not stop_event.is_set():
+        data = read_sensor_data(sensor_id, temperature_range, humidity_range)
+        logging.info(f"📡 Đọc dữ liệu cảm biến: {data}")
+        send_to_kafka(data)
+        stop_event.wait(interval)  # Thay vì time.sleep() để có thể dừng an toàn
+
 def main(sensors, interval):
-    """Gửi dữ liệu liên tục."""
+    """Tạo luồng riêng cho từng cảm biến."""
+    threads = []
+    for sensor in sensors:
+        t = Thread(target=sensor_thread, args=(sensor["sensor_id"], sensor["temperature_range"], sensor["humidity_range"], interval), daemon=False)
+        threads.append(t)
+        t.start()
+
     try:
-        while True:
-            for sensor in sensors:
-                data = read_sensor_data(
-                    sensor_id=sensor["sensor_id"],
-                    temperature_range=sensor.get("temperature_range", (20, 30)),
-                    humidity_range=sensor.get("humidity_range", (40, 60))
-                )
-                print(f"📡 Đọc dữ liệu cảm biến từ Farm 1: {data}")
-                send_to_kafka(data)
-            time.sleep(interval)
+        for t in threads:
+            t.join()
     except KeyboardInterrupt:
-        print("🚀 Đang dừng gateway, flush tin nhắn còn lại...")
-    finally:
-        producer.flush()
+        logging.info("🔴 Nhận tín hiệu dừng, kết thúc các luồng...")
+        stop_event.set()
+        for t in threads:
+            t.join()
+        close_producer()  # Đảm bảo Kafka producer được đóng
+        logging.info("✅ Đã dừng tất cả các luồng.")
+        import sys
+        sys.exit(0)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Kafka Sensor Data Producer")
