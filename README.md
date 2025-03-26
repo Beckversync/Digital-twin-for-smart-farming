@@ -1,4 +1,4 @@
 docker-compose up -d influxdb
 <p align="center">
-<img width=800 src="https://github.com/user-attachments/assets/412474fb-3529-4903-ace8-8139e3783b57"/>
+<img width=800 src="https://github.com/user-attachments/assets/2dfb8fe1-59d7-455b-8d84-e3fdf7c05df2"/>
 </p>
