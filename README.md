@@ -1,5 +1,9 @@
 
-# 🌱 Digital Twin For Smart Farming
+
+
+<p align="center">
+<img width=800 src="https://github.com/user-attachments/assets/b173e910-d9a9-4106-812f-1d24e2d6235c"/>
+</p>
 
 ## 📌 Project Overview
 
