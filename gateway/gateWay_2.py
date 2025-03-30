@@ -26,55 +26,44 @@ if not KAFKA_BOOTSTRAP_SERVERS:
 PRODUCER_CONFIG = {
     'bootstrap.servers': KAFKA_BOOTSTRAP_SERVERS,
     'compression.type': 'snappy',
-    'linger.ms': 10,      # Tối ưu hiệu suất gửi
-    'batch.size': 65536,   # Cải thiện thông lượng
+    'linger.ms': 10,
+    'batch.size': 65536,
 }
 
+DEFAULT_MAX_RETRIES = int(os.getenv("MAX_RETRIES", 3))
+DEFAULT_POLL_TIMEOUT = float(os.getenv("POLL_TIMEOUT", 1))
 
 def create_producer():
-    """
-    Tạo và trả về Kafka Producer.
-    """
+    """Tạo và trả về Kafka Producer."""
     try:
         return Producer(PRODUCER_CONFIG)
     except KafkaException as e:
         logger.error(f"❌ Không thể khởi tạo Kafka Producer: {e}")
         exit(1)
 
-
-# Khởi tạo Kafka Producer toàn cục
 producer = create_producer()
 
-# Sự kiện báo hiệu dừng các luồng
+# Sự kiện để báo hiệu dừng các luồng
 stop_event = Event()
 
-
 def close_producer():
-    """
-    Flush các message chờ và đóng Kafka Producer.
-    """
-    logger.info("🔴 Đang đóng Kafka producer...")
+    """Flush các message chờ và đóng Kafka Producer."""
+    logger.info("🔴 Đang đóng Kafka Producer...")
     producer.flush(timeout=5)
-    logger.info("✅ Kafka producer đã đóng.")
+    logger.info("✅ Kafka Producer đã đóng.")
 
-
-# Đăng ký hàm đóng producer khi ứng dụng thoát
 atexit.register(close_producer)
 
-
 def delivery_callback(err, msg):
-    """
-    Callback khi gửi message tới Kafka.
-    """
+    """Callback khi gửi message đến Kafka."""
     if err:
         logger.warning(f"⚠️ Lỗi khi gửi tin: {err}")
     else:
         logger.debug(f"✅ Tin gửi thành công tới {msg.topic()} [partition {msg.partition()}] offset {msg.offset()}")
 
-
-def send_to_kafka(data, retries=3):
+def send_to_kafka(data, retries=DEFAULT_MAX_RETRIES):
     """
-    Gửi dữ liệu đến Kafka với cơ chế thử lại khi gặp lỗi.
+    Gửi dữ liệu tới Kafka với cơ chế retry sử dụng exponential backoff.
     
     Args:
         data (dict): Dữ liệu cảm biến cần gửi.
@@ -84,13 +73,14 @@ def send_to_kafka(data, retries=3):
     for attempt in range(1, retries + 1):
         try:
             producer.produce(KAFKA_TOPIC, value=message_json.encode('utf-8'), callback=delivery_callback)
-            producer.poll(1)  # Chờ 1 giây để đảm bảo tin được gửi
+            producer.poll(DEFAULT_POLL_TIMEOUT)
             return
         except KafkaException as e:
             logger.warning(f"⚠️ Kafka Error (lần {attempt}/{retries}): {e}")
             if attempt < retries:
-                time.sleep(2)
-
+                sleep_time = (2 ** attempt) + random.uniform(0, 0.1)
+                time.sleep(sleep_time)
+    logger.error("❌ Gửi dữ liệu thất bại sau nhiều lần retry.")
 
 def read_sensor_data(sensor_id, temperature_range=(20, 30), humidity_range=(40, 60)):
     """
@@ -111,33 +101,24 @@ def read_sensor_data(sensor_id, temperature_range=(20, 30), humidity_range=(40, 
         "timestamp": datetime.utcnow().isoformat() + "Z"
     }
 
-
 def sensor_loop(sensor_id, temperature_range, humidity_range, interval):
-    """
-    Vòng lặp đọc dữ liệu cảm biến và gửi dữ liệu đến Kafka theo khoảng thời gian cố định.
-    
-    Args:
-        sensor_id (str): ID của cảm biến.
-        temperature_range (tuple): Khoảng nhiệt độ.
-        humidity_range (tuple): Khoảng độ ẩm.
-        interval (int): Khoảng thời gian giữa các lần gửi (giây).
-    """
+    """Vòng lặp đọc dữ liệu cảm biến và gửi dữ liệu đến Kafka theo khoảng thời gian cố định."""
     while not stop_event.is_set():
         data = read_sensor_data(sensor_id, temperature_range, humidity_range)
-        logger.info(f"📡 Đọc dữ liệu cảm biến: {data}")
+        logger.info(f"📡 [Farm2] Đọc dữ liệu cảm biến: {data}")
         send_to_kafka(data)
         time.sleep(interval)
 
-
-def run_sensor_threads(sensors, interval):
+def run_sensor_threads(sensors, interval, max_workers):
     """
     Khởi chạy các luồng đọc cảm biến song song.
     
     Args:
         sensors (list): Danh sách cấu hình cảm biến.
-        interval (int): Khoảng thời gian gửi dữ liệu.
+        interval (int): Khoảng thời gian giữa các lần gửi (giây).
+        max_workers (int): Số luồng tối đa của ThreadPoolExecutor.
     """
-    with ThreadPoolExecutor(max_workers=len(sensors)) as executor:
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
         for sensor in sensors:
             executor.submit(
                 sensor_loop,
@@ -146,7 +127,6 @@ def run_sensor_threads(sensors, interval):
                 sensor["humidity_range"],
                 interval
             )
-
         try:
             while True:
                 time.sleep(1)
@@ -156,20 +136,15 @@ def run_sensor_threads(sensors, interval):
             close_producer()
             logger.info("✅ Đã dừng tất cả các luồng.")
 
-
 def parse_arguments():
-    """
-    Phân tích tham số dòng lệnh.
-    
-    Returns:
-        argparse.Namespace: Các tham số đã được phân tích.
-    """
+    """Phân tích các tham số dòng lệnh."""
     parser = argparse.ArgumentParser(description="Kafka Sensor Data Producer cho Farm 2")
     parser.add_argument("--interval", type=int, default=5, help="Thời gian giữa các lần gửi (giây)")
+    parser.add_argument("--sensor_count", type=int, default=10, help="Số lượng cảm biến cần mô phỏng")
+    parser.add_argument("--max_workers", type=int, default=10, help="Số luồng tối đa của ThreadPoolExecutor")
     return parser.parse_args()
 
-
-def generate_sensors(count=10):
+def generate_sensors(count):
     """
     Sinh ra danh sách cảm biến với cấu hình nhiệt độ và độ ẩm khác nhau.
     
@@ -183,20 +158,16 @@ def generate_sensors(count=10):
     for i in range(count):
         sensors.append({
             "sensor_id": f"sensor_farm2_{i + 1}",
-            "temperature_range": (20 + i, 25 + i),
-            "humidity_range": (40 + i, 60 + i)
+            "temperature_range": (20 + i % 5, 25 + i % 5),
+            "humidity_range": (40 + i % 10, 60 + i % 10)
         })
     return sensors
 
-
 def main():
-    """
-    Hàm chính khởi chạy ứng dụng.
-    """
+    """Hàm chính khởi chạy ứng dụng cho Farm 2."""
     args = parse_arguments()
-    sensors = generate_sensors(count=10)
-    run_sensor_threads(sensors, args.interval)
-
+    sensors = generate_sensors(args.sensor_count)
+    run_sensor_threads(sensors, args.interval, args.max_workers)
 
 if __name__ == "__main__":
     main()
