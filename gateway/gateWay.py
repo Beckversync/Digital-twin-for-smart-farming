@@ -10,16 +10,14 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from confluent_kafka import Producer, KafkaException
 
-# Cấu hình logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# Cấu hình Kafka cho Farm 1
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:39092")
 KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "sensor_data_farm1")
 
 if not KAFKA_BOOTSTRAP_SERVERS:
-    logger.error("❌ KAFKA_BOOTSTRAP_SERVERS không được cấu hình!")
+    logger.error(" KAFKA_BOOTSTRAP_SERVERS không được cấu hình!")
     exit(1)
 
 # Cấu hình Kafka Producer
@@ -173,3 +171,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
