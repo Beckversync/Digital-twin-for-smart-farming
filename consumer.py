@@ -38,7 +38,7 @@ def create_influx_client():
         write_api = client.write_api()
         return client, write_api
     except Exception as e:
-        logger.error(f"❌ Không thể kết nối InfluxDB: {e}")
+        logger.error(f" Không thể kết nối InfluxDB: {e}")
         exit(1)
 
 def create_kafka_consumer():
@@ -56,7 +56,7 @@ def create_kafka_consumer():
         )
         return consumer
     except Exception as e:
-        logger.error(f"❌ Không thể khởi tạo Kafka Consumer: {e}")
+        logger.error(f" Không thể khởi tạo Kafka Consumer: {e}")
         exit(1)
 
 # Khởi tạo thread pool và lock để đảm bảo thread-safe cho biến last_values
@@ -88,7 +88,7 @@ def process_message(data, write_api):
     """
     sensor_id = data.get("sensor_id")
     if sensor_id is None:
-        logger.warning("🔄 Dữ liệu không hợp lệ, thiếu sensor_id.")
+        logger.warning(" Dữ liệu không hợp lệ, thiếu sensor_id.")
         return
 
     try:
@@ -99,7 +99,7 @@ def process_message(data, write_api):
 
     with lock:
         if sensor_id in last_values and abs(last_values[sensor_id] - current_temp) < CHANGE_THRESHOLD:
-            logger.debug(f"🔄 Bỏ qua dữ liệu không thay đổi đáng kể: {data}")
+            logger.debug(f" Bỏ qua dữ liệu không thay đổi đáng kể: {data}")
             return
         last_values[sensor_id] = current_temp
 
@@ -114,15 +114,15 @@ def process_message(data, write_api):
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             write_api.write(bucket=INFLUXDB_BUCKET, org=INFLUXDB_ORG, record=point)
-            logger.info(f"📥 Dữ liệu đã lưu vào InfluxDB: {data}")
+            logger.info(f" Dữ liệu đã lưu vào InfluxDB: {data}")
             break
         except Exception as e:
-            logger.warning(f"⚠️ Lỗi khi ghi vào InfluxDB (lần {attempt}/{MAX_RETRIES}): {e}")
+            logger.warning(f" Lỗi khi ghi vào InfluxDB (lần {attempt}/{MAX_RETRIES}): {e}")
             if attempt < MAX_RETRIES:
                 sleep_time = (2 ** attempt) + random.uniform(0, 0.1)
                 time.sleep(sleep_time)
             else:
-                logger.error("❌ Ghi dữ liệu thất bại sau nhiều lần retry.")
+                logger.error(" Ghi dữ liệu thất bại sau nhiều lần retry.")
 
 def consume_messages(consumer, write_api, influx_client):
     """
@@ -139,12 +139,12 @@ def consume_messages(consumer, write_api, influx_client):
             data = message.value
             pool.submit(process_message, data, write_api)
     except KeyboardInterrupt:
-        logger.warning("⚠️ Consumer dừng do người dùng yêu cầu.")
+        logger.warning(" Consumer dừng do người dùng yêu cầu.")
     finally:
         consumer.close()
         influx_client.close()
         pool.shutdown(wait=True)
-        logger.info("🔌 Consumer đã đóng kết nối.")
+        logger.info(" Consumer đã đóng kết nối.")
 
 def main():
     """
